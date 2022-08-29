@@ -1,0 +1,19 @@
+[package]
+name = "tudelft-nes-test"
+version = "0.1.0"
+edition = "2021"
+authors = [
+    "Victor Roest <victor@xirion.net>",
+    "Jonathan Dönszelmann <jonabent@gmail.com>",
+]
+description = "support library for the 'software fundamentals' project for the TU Delft"
+repository = "https://gitlab.ewi.tudelft.nl/software-fundamentals/nes-emulator-testing"
+keywords = ["NES", "tudelft"]
+categories = ["emulators", "development-tools::testing"]
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tudelft-nes-ppu = "1.0.3"
+thiserror = "1.0.32"
