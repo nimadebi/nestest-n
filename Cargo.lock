@@ -1020,18 +1020,19 @@ dependencies = [
 [[package]]
 name = "tudelft-nes-ppu"
 version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41174fa93758dbce9574e20951200a4b2ab3e0a4656d132338d3de3f1936568e"
 dependencies = [
  "itertools",
+ "log",
  "pixels",
  "winit",
 ]
 
 [[package]]
 name = "tudelft-nes-test"
-version = "0.1.1"
+version = "1.0.0"
 dependencies = [
+ "bitflags",
+ "log",
  "thiserror",
  "tudelft-nes-ppu",
 ]
