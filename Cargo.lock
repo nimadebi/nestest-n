@@ -1019,7 +1019,9 @@ dependencies = [
 
 [[package]]
 name = "tudelft-nes-ppu"
-version = "1.0.3"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0cbb9dee538e10ac475f1f772bf67acfdf0b214b3741386d7c7c2df9d810f9f"
 dependencies = [
  "itertools",
  "log",
