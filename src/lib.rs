@@ -23,8 +23,9 @@ bitflags! {
         const NESTEST         = 0b00000001;
         const ALL_INSTRS      = 0b00000010;
         const OFFICIAL_INSTRS = 0b00000100;
-        const ALL             = Self::NESTEST.bits | Self::ALL_INSTRS.bits;
-        const DEFAULT         = Self::OFFICIAL_INSTRS.bits;
+        const NROM_TEST       = 0b00001000;
+        const ALL             = Self::NESTEST.bits | Self::ALL_INSTRS.bits | Self::NROM_TEST.bits;
+        const DEFAULT         = Self::OFFICIAL_INSTRS.bits | Self::NROM_TEST.bits;
     }
 }
 
@@ -45,6 +46,10 @@ pub fn run_tests<T: TestableCpu>(selector: TestSelector) -> Result<(), String> {
 
     if selector.contains(TestSelector::NESTEST) {
         nestest::<T>()?;
+    }
+
+    if selector.contains(TestSelector::NROM_TEST) {
+        nrom_test::<T>()?;
     }
 
     Ok(())
@@ -145,6 +150,29 @@ fn nestest<T: TestableCpu + 'static>() -> Result<(), String> {
     });
 
     process_handle("nestest", handle)
+}
+
+
+/// runs our own nrom test rom
+/// https://gitlab.ewi.tudelft.nl/software-fundamentals/nes-nrom-test
+fn nrom_test<T: TestableCpu + 'static>() -> Result<(), String> {
+    let rom = include_bytes!("roms/nrom-test.nes");
+
+    let handle = thread::spawn(|| {
+        let mut cpu = T::get_cpu(rom).map_err(|i| TestError::Custom(i.to_string()))?;
+        run_cpu_headless_for(&mut cpu, Mirroring::Horizontal, 10)
+            .map_err(|i| TestError::Custom(i.to_string()))?;
+
+        if cpu.memory_read(0x42) != 0x43 {
+            Err(TestError::String("memory location 0x42 is wrong after executing nrom_test".to_owned()))
+        } else if cpu.memory_read(0x43) != 0x6A { 
+            Err(TestError::String("memory location 0x43 is wrong after executing nrom_test".to_owned()))
+        } else {
+            Ok(())
+        }
+    });
+
+    process_handle("nrom_test", handle)
 }
 
 #[derive(Debug, Error)]
