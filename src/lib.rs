@@ -1,3 +1,5 @@
+//! # `tudelft-nes-test`
+//! This is a helper crate for your NES emulator to run various test ROMs
 use crate::all_instrs::{all_instrs_status_code, read_status_string};
 use bitflags::bitflags;
 use std::error::Error;
@@ -11,6 +13,7 @@ mod nestest;
 
 use crate::nestest::nestest_status_code;
 
+/// Implement this trait to run our test on our CPU via the [`run_tests`] function.
 pub trait TestableCpu: Cpu + Sized + 'static {
     fn get_cpu(rom: &[u8]) -> Result<Self, Box<dyn Error>>;
     fn set_program_counter(&mut self, value: u16);
@@ -20,11 +23,27 @@ pub trait TestableCpu: Cpu + Sized + 'static {
 bitflags! {
     /// Select which tests you want to run
     pub struct TestSelector: u32 {
+        /// `NESTEST` is a pretty much all inclusive test suite for a NES CPU. It was designed to test almost every combination of flags, instructions,
+        /// and registers. Some of these tests are very difficult.
+        /// More information about this test ROM can be found [here](https://github.com/christopherpow/nes-test-roms/blob/master/other/nestest.txt)
         const NESTEST         = 0b00000001;
+
+        /// `ALL_INSTRS` tests all instructions (including unofficial ones).
+        /// More function about this test can be found [here](https://github.com/christopherpow/nes-test-roms/tree/master/instr_test-v5)
         const ALL_INSTRS      = 0b00000010;
+
+        /// `OFFICIAL_INSTRS` tests all official nes instructions, a finished emulator should pass this.
+        /// More function about this test can be found [here](https://github.com/christopherpow/nes-test-roms/tree/master/instr_test-v5)
         const OFFICIAL_INSTRS = 0b00000100;
+
+        /// `NROM_TEST` is a very simple rom that tests some basic functionality, this is a good starting test to try and pass.
+        /// The source for this rom can be found [here](https://gitlab.ewi.tudelft.nl/software-fundamentals/nes-nrom-test/-/blob/main/src/nrom.s)
         const NROM_TEST       = 0b00001000;
+
+        /// This test selector runs all available tests
         const ALL             = Self::NESTEST.bits | Self::ALL_INSTRS.bits | Self::NROM_TEST.bits;
+
+        /// This test selector runs a default selection of tests: `OFFICIAL_INSTRS` and `NROM_TEST`
         const DEFAULT         = Self::OFFICIAL_INSTRS.bits | Self::NROM_TEST.bits;
     }
 }
@@ -35,6 +54,7 @@ impl Default for TestSelector {
     }
 }
 
+/// The main function of this crate, run this with your CPU as generic parameter and a [`TestSelector`] to run the tests
 pub fn run_tests<T: TestableCpu>(selector: TestSelector) -> Result<(), String> {
     if selector.contains(TestSelector::ALL_INSTRS) {
         all_instrs::<T>(false)?;
@@ -152,7 +172,6 @@ fn nestest<T: TestableCpu + 'static>() -> Result<(), String> {
     process_handle("nestest", handle)
 }
 
-
 /// runs our own nrom test rom
 /// https://gitlab.ewi.tudelft.nl/software-fundamentals/nes-nrom-test
 fn nrom_test<T: TestableCpu + 'static>() -> Result<(), String> {
@@ -164,9 +183,13 @@ fn nrom_test<T: TestableCpu + 'static>() -> Result<(), String> {
             .map_err(|i| TestError::Custom(i.to_string()))?;
 
         if cpu.memory_read(0x42) != 0x43 {
-            Err(TestError::String("memory location 0x42 is wrong after executing nrom_test".to_owned()))
-        } else if cpu.memory_read(0x43) != 0x6A { 
-            Err(TestError::String("memory location 0x43 is wrong after executing nrom_test".to_owned()))
+            Err(TestError::String(
+                "memory location 0x42 is wrong after executing nrom_test".to_owned(),
+            ))
+        } else if cpu.memory_read(0x43) != 0x6A {
+            Err(TestError::String(
+                "memory location 0x43 is wrong after executing nrom_test".to_owned(),
+            ))
         } else {
             Ok(())
         }
