@@ -37,7 +37,7 @@ bitflags! {
         const OFFICIAL_INSTRS = 0b00000100;
 
         /// `NROM_TEST` is a very simple rom that tests some basic functionality, this is a good starting test to try and pass.
-        /// The source for this rom can be found [here](https://gitlab.ewi.tudelft.nl/software-fundamentals/nes-nrom-test/-/blob/main/src/nrom.s)
+        /// The source for this rom can be found [here](https://gitlab.ewi.tudelft.nl/software-fundamentals/nes-nrom-test/-/blob/main/src/init.s)
         const NROM_TEST       = 0b00001000;
 
         /// This test selector runs all available tests
