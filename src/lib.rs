@@ -56,21 +56,23 @@ impl Default for TestSelector {
 
 /// The main function of this crate, run this with your CPU as generic parameter and a [`TestSelector`] to run the tests
 pub fn run_tests<T: TestableCpu>(selector: TestSelector) -> Result<(), String> {
-    if selector.contains(TestSelector::ALL_INSTRS) {
-        all_instrs::<T>(false)?;
+    if selector.contains(TestSelector::NROM_TEST) {
+        nrom_test::<T>()?;
     }
 
     if selector.contains(TestSelector::OFFICIAL_INSTRS) {
         all_instrs::<T>(true)?;
     }
 
+    if selector.contains(TestSelector::ALL_INSTRS) {
+        all_instrs::<T>(false)?;
+    }
+
     if selector.contains(TestSelector::NESTEST) {
         nestest::<T>()?;
     }
 
-    if selector.contains(TestSelector::NROM_TEST) {
-        nrom_test::<T>()?;
-    }
+ 
 
     Ok(())
 }
