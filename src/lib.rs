@@ -15,8 +15,16 @@ use crate::nestest::nestest_status_code;
 
 /// Implement this trait to run our test on our CPU via the [`run_tests`] function.
 pub trait TestableCpu: Cpu + Sized + 'static {
+    /// This function is used by the test suite to get a handle on your CPU
+    /// `rom` is a rom file in INES format.
     fn get_cpu(rom: &[u8]) -> Result<Self, Box<dyn Error>>;
+
+    /// [`set_program_counter`] is used to set the program counter of the cpu to a specific position
+    /// this is needed by some tests.
     fn set_program_counter(&mut self, value: u16);
+
+    /// [`memory_read`] is used to test the succesfulness of tests by seeing if the CPU has expected values
+    /// at certain memory locations, it simply takes an address and should return the byte of data at that memory location
     fn memory_read(&self, address: u16) -> u8;
 }
 
@@ -71,9 +79,6 @@ pub fn run_tests<T: TestableCpu>(selector: TestSelector) -> Result<(), String> {
     if selector.contains(TestSelector::NESTEST) {
         nestest::<T>()?;
     }
-
- 
-
     Ok(())
 }
 
