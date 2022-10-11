@@ -13,9 +13,13 @@ mod nestest;
 
 use crate::nestest::nestest_status_code;
 
+/// Raw bytes for the all_instr rom
 pub const ROM_ALL_INSTR: &[u8] = include_bytes!("roms/all_instrs.nes");
+/// Raw bytes for the nestest rom
 pub const ROM_NESTEST: &[u8] = include_bytes!("roms/nestest.nes");
+/// Raw bytes for the nrom rom
 pub const ROM_NROM_TEST: &[u8] = include_bytes!("roms/nrom-test.nes");
+/// Raw bytes for the official_only rom
 pub const ROM_OFFICIAL_ONLY: &[u8] = include_bytes!("roms/official_only.nes");
 
 /// Implement this trait to run our test on our CPU via the [`run_tests`] function.
