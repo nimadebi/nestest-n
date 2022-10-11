@@ -13,6 +13,11 @@ mod nestest;
 
 use crate::nestest::nestest_status_code;
 
+pub const ROM_ALL_INSTR: &[u8] = include_bytes!("roms/all_instrs.nes");
+pub const ROM_NESTEST: &[u8] = include_bytes!("roms/nestest.nes");
+pub const ROM_NROM_TEST: &[u8] = include_bytes!("roms/nrom-test.nes");
+pub const ROM_OFFICIAL_ONLY: &[u8] = include_bytes!("roms/official_only.nes");
+
 /// Implement this trait to run our test on our CPU via the [`run_tests`] function.
 pub trait TestableCpu: Cpu + Sized + 'static {
     /// This function is used by the test suite to get a handle on your CPU
@@ -86,9 +91,9 @@ pub fn run_tests<T: TestableCpu>(selector: TestSelector) -> Result<(), String> {
 /// https://github.com/christopherpow/nes-test-roms/tree/master/instr_test-v5
 fn all_instrs<T: TestableCpu + 'static>(only_official: bool) -> Result<(), String> {
     let (rom, limit) = if only_official {
-        (include_bytes!("roms/official_only.nes"), 350)
+        (ROM_OFFICIAL_ONLY, 350)
     } else {
-        (include_bytes!("roms/all_instrs.nes"), 500)
+        (ROM_ALL_INSTR, 500)
     };
 
     let handle = thread::spawn(move || {
@@ -152,7 +157,7 @@ fn all_instrs<T: TestableCpu + 'static>(only_official: bool) -> Result<(), Strin
 /// Runs the nestest rom:
 /// https://github.com/christopherpow/nes-test-roms/blob/master/other/nestest.nes
 fn nestest<T: TestableCpu + 'static>() -> Result<(), String> {
-    let rom = include_bytes!("roms/nestest.nes");
+    let rom = ROM_NESTEST;
 
     let handle = thread::spawn(|| {
         // TODO: make initial program counter obsolete by modifying nestest
@@ -182,7 +187,7 @@ fn nestest<T: TestableCpu + 'static>() -> Result<(), String> {
 /// runs our own nrom test rom
 /// https://gitlab.ewi.tudelft.nl/software-fundamentals/nes-nrom-test
 fn nrom_test<T: TestableCpu + 'static>() -> Result<(), String> {
-    let rom = include_bytes!("roms/nrom-test.nes");
+    let rom = ROM_NROM_TEST;
 
     let handle = thread::spawn(|| {
         let mut cpu = T::get_cpu(rom).map_err(|i| TestError::Custom(i.to_string()))?;
