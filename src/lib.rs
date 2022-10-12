@@ -1,3 +1,5 @@
+//! # `tudelft-nes-test`
+//! This is a helper crate for your NES emulator to run various test ROMs
 use crate::all_instrs::{all_instrs_status_code, read_status_string};
 use bitflags::bitflags;
 use std::error::Error;
@@ -11,22 +13,57 @@ mod nestest;
 
 use crate::nestest::nestest_status_code;
 
+/// Raw bytes for the all_instr rom
+pub const ROM_ALL_INSTR: &[u8] = include_bytes!("roms/all_instrs.nes");
+/// Raw bytes for the nestest rom
+pub const ROM_NESTEST: &[u8] = include_bytes!("roms/nestest.nes");
+/// Raw bytes for the nrom rom
+pub const ROM_NROM_TEST: &[u8] = include_bytes!("roms/nrom-test.nes");
+/// Raw bytes for the official_only rom
+pub const ROM_OFFICIAL_ONLY: &[u8] = include_bytes!("roms/official_only.nes");
+
+/// Implement this trait to run our test on our CPU via the [`run_tests`] function.
 pub trait TestableCpu: Cpu + Sized + 'static {
     type GetCpuError: Error;
 
+    /// This function is used by the test suite to get a handle on your CPU
+    /// `rom` is a rom file in INES format.
     fn get_cpu(rom: &[u8]) -> Result<Self, Self::GetCpuError>;
+
+    /// [`set_program_counter`] is used to set the program counter of the cpu to a specific position
+    /// this is needed by some tests.
     fn set_program_counter(&mut self, value: u16);
+
+    /// [`memory_read`] is used to test the succesfulness of tests by seeing if the CPU has expected values
+    /// at certain memory locations, it simply takes an address and should return the byte of data at that memory location
     fn memory_read(&self, address: u16) -> u8;
 }
 
 bitflags! {
     /// Select which tests you want to run
     pub struct TestSelector: u32 {
+        /// `NESTEST` is a pretty much all inclusive test suite for a NES CPU. It was designed to test almost every combination of flags, instructions,
+        /// and registers. Some of these tests are very difficult.
+        /// More information about this test ROM can be found [here](https://github.com/christopherpow/nes-test-roms/blob/master/other/nestest.txt)
         const NESTEST         = 0b00000001;
+
+        /// `ALL_INSTRS` tests all instructions (including unofficial ones).
+        /// More function about this test can be found [here](https://github.com/christopherpow/nes-test-roms/tree/master/instr_test-v5)
         const ALL_INSTRS      = 0b00000010;
+
+        /// `OFFICIAL_INSTRS` tests all official nes instructions, a finished emulator should pass this.
+        /// More function about this test can be found [here](https://github.com/christopherpow/nes-test-roms/tree/master/instr_test-v5)
         const OFFICIAL_INSTRS = 0b00000100;
-        const ALL             = Self::NESTEST.bits | Self::ALL_INSTRS.bits;
-        const DEFAULT         = Self::OFFICIAL_INSTRS.bits;
+
+        /// `NROM_TEST` is a very simple rom that tests some basic functionality, this is a good starting test to try and pass.
+        /// The source for this rom can be found [here](https://gitlab.ewi.tudelft.nl/software-fundamentals/nes-nrom-test/-/blob/main/src/init.s)
+        const NROM_TEST       = 0b00001000;
+
+        /// This test selector runs all available tests
+        const ALL             = Self::NESTEST.bits | Self::ALL_INSTRS.bits | Self::NROM_TEST.bits;
+
+        /// This test selector runs a default selection of tests: `OFFICIAL_INSTRS` and `NROM_TEST`
+        const DEFAULT         = Self::OFFICIAL_INSTRS.bits | Self::NROM_TEST.bits;
     }
 }
 
@@ -36,19 +73,23 @@ impl Default for TestSelector {
     }
 }
 
+/// The main function of this crate, run this with your CPU as generic parameter and a [`TestSelector`] to run the tests
 pub fn run_tests<T: TestableCpu>(selector: TestSelector) -> Result<(), String> {
-    if selector.contains(TestSelector::ALL_INSTRS) {
-        all_instrs::<T>(false)?;
+    if selector.contains(TestSelector::NROM_TEST) {
+        nrom_test::<T>()?;
     }
 
     if selector.contains(TestSelector::OFFICIAL_INSTRS) {
         all_instrs::<T>(true)?;
     }
 
+    if selector.contains(TestSelector::ALL_INSTRS) {
+        all_instrs::<T>(false)?;
+    }
+
     if selector.contains(TestSelector::NESTEST) {
         nestest::<T>()?;
     }
-
     Ok(())
 }
 
@@ -56,9 +97,9 @@ pub fn run_tests<T: TestableCpu>(selector: TestSelector) -> Result<(), String> {
 /// https://github.com/christopherpow/nes-test-roms/tree/master/instr_test-v5
 fn all_instrs<T: TestableCpu + 'static>(only_official: bool) -> Result<(), String> {
     let (rom, limit) = if only_official {
-        (include_bytes!("roms/official_only.nes"), 350)
+        (ROM_OFFICIAL_ONLY, 350)
     } else {
-        (include_bytes!("roms/all_instrs.nes"), 500)
+        (ROM_ALL_INSTR, 500)
     };
 
     let handle = thread::spawn(move || {
@@ -122,7 +163,7 @@ fn all_instrs<T: TestableCpu + 'static>(only_official: bool) -> Result<(), Strin
 /// Runs the nestest rom:
 /// https://github.com/christopherpow/nes-test-roms/blob/master/other/nestest.nes
 fn nestest<T: TestableCpu + 'static>() -> Result<(), String> {
-    let rom = include_bytes!("roms/nestest.nes");
+    let rom = ROM_NESTEST;
 
     let handle = thread::spawn(|| {
         // TODO: make initial program counter obsolete by modifying nestest
@@ -147,6 +188,32 @@ fn nestest<T: TestableCpu + 'static>() -> Result<(), String> {
     });
 
     process_handle("nestest", handle)
+}
+
+/// runs our own nrom test rom
+/// https://gitlab.ewi.tudelft.nl/software-fundamentals/nes-nrom-test
+fn nrom_test<T: TestableCpu + 'static>() -> Result<(), String> {
+    let rom = ROM_NROM_TEST;
+
+    let handle = thread::spawn(|| {
+        let mut cpu = T::get_cpu(rom).map_err(|i| TestError::Custom(i.to_string()))?;
+        run_cpu_headless_for(&mut cpu, Mirroring::Horizontal, 10)
+            .map_err(|i| TestError::Custom(i.to_string()))?;
+
+        if cpu.memory_read(0x42) != 0x43 {
+            Err(TestError::String(
+                "memory location 0x42 is wrong after executing nrom_test".to_owned(),
+            ))
+        } else if cpu.memory_read(0x43) != 0x6A {
+            Err(TestError::String(
+                "memory location 0x43 is wrong after executing nrom_test".to_owned(),
+            ))
+        } else {
+            Ok(())
+        }
+    });
+
+    process_handle("nrom_test", handle)
 }
 
 #[derive(Debug, Error)]
