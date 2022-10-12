@@ -12,7 +12,9 @@ mod nestest;
 use crate::nestest::nestest_status_code;
 
 pub trait TestableCpu: Cpu + Sized + 'static {
-    fn get_cpu(rom: &[u8]) -> Result<Self, Box<dyn Error>>;
+    type GetCpuError: Error;
+
+    fn get_cpu(rom: &[u8]) -> Result<Self, Self::GetCpuError>;
     fn set_program_counter(&mut self, value: u16);
     fn memory_read(&self, address: u16) -> u8;
 }
